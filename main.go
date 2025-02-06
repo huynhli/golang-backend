@@ -5,15 +5,26 @@ import (
 	"net/http"
 )
 
+// global vars
+var taskListOne = []string{"clean desk", "clean bed", "clean shower", "clean dishes"}
+var taskListTwo = []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
+var taskLists [][]string
+
 func main() {
 	print("Welcome to the to do list app!")
 
 	//handler
 	//(url, function tp handle)
+	http.HandleFunc("/", welcome)
 	http.HandleFunc("/greeting", helloUser)
+	http.HandleFunc("/showTasks", showTasks)
 
 	http.ListenAndServe(":8080", nil)
 
+}
+
+func welcome(writer http.ResponseWriter, request *http.Request) {
+	fmt.Fprintf(writer, "Hi!")
 }
 
 func helloUser(writer http.ResponseWriter, request *http.Request) {
@@ -21,16 +32,13 @@ func helloUser(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintf(writer, greeting)
 }
 
-func twoList() {
-	taskListOne := []string{"clean desk", "clean bed", "clean shower", "clean dishes"}
-	taskListTwo := []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
-	var taskLists [][]string
+func showTasks(writer http.ResponseWriter, request *http.Request) {
 	taskLists = append(taskLists, taskListOne)
 
 	taskListTwo = addTask(taskListTwo, "make dinner")
 	taskLists = append(taskLists, taskListTwo)
 
-	printAllTasks(taskLists)
+	fmt.Fprint(writer, taskListOne)
 }
 
 //http is how data from is transferred between backend and frontend
