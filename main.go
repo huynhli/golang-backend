@@ -24,7 +24,7 @@ func main() {
 }
 
 func welcome(writer http.ResponseWriter, request *http.Request) {
-	fmt.Fprintf(writer, "Hi!")
+	fmt.Fprintf(writer, "Hi! Please visit /greeting or /showTasks to view the two other pages.")
 }
 
 func helloUser(writer http.ResponseWriter, request *http.Request) {
@@ -50,7 +50,7 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 //mediates frontend and database as well as complex functions
 
 //url?
-//protocl + hostname + port
+//protocal + hostname + port
 
 //port 80 = default e.g. google.com:80
 
