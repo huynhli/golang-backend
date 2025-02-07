@@ -46,9 +46,10 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//tells client to interpret response as html
 	writer.Header().Set("Content-Type", "text/html")
 
-	var task_msg = `<p>This is the tasks page. Note: Each task list has a maximum size of 10 tasks. Each task must be under 30 characters long.</p>`
+	var task_msg = `<p>This is the tasks page. Note: Each task list has a maximum size of 10 tasks. Each task must be under 30 characters long.<br /> 
+					To add a task, simply click on the button for the respective task list, then add one or more tasks, finally clicking on the <br />
+					task list button again.</p>`
 	fmt.Fprintln(writer, task_msg)
-
 	//button press submits a form, name is used when submitted -> when called, sends value
 	//TODO make these variable calls
 	//TODO make button values just nums and refactor
@@ -65,8 +66,9 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 
 	fmt.Fprintln(writer, `
 		<form method="POST">
-			<p>Task to add: </p>
+			<label>Task to add: </label>
 			<input type="text" id="inputBox" name="user_input">
+			<label>Priority Level: </label>
 			<select name="priority" id="priority">
 				<option value="1">1</option>
 				<option value="2">2</option>
@@ -89,8 +91,8 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//DELETE remove resources -> deleting trasks
 
 	//checks "did client click a button and submit a form (POST request)"
-	if request.Method == http.MethodGet {
-
+	//TODO huge switch helper with everything?
+	if request.Method == http.MethodGet && request.URL.Query().Get("action") != "" {
 		//TODO delete this
 		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
@@ -125,9 +127,6 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 		} else if len(taskLists[currentTaskListInt-1]) >= 10 {
 			fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
 		} else {
-			if currentTaskListInt == 0 { //needs this for some reason so loading doesn't break it
-				return
-			}
 			// var currentTaskList = taskLists[currentTaskListInt-1]     **don't do this lol
 			var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
 			if priorityLevel <= len(taskLists[currentTaskListInt-1]) {
@@ -135,14 +134,15 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 				copy(taskLists[currentTaskListInt-1][priorityLevel:], taskLists[currentTaskListInt-1][priorityLevel-1:]) // moves everything to the right
 				taskLists[currentTaskListInt-1][priorityLevel-1] = request.FormValue("user_input")
 				taskListOne = taskLists[currentTaskListInt-1]
-				fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
+				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 			} else {
 				taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], request.FormValue("user_input"))
 				taskListOne = taskLists[currentTaskListInt-1]
-				fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
+				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 			}
 		}
 	}
+
 }
 
 func taskListSwitch(buttonNum string, taskList []string) []string {
