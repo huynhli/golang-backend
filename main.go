@@ -3,13 +3,17 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"regexp"
+	"strconv"
 )
 
 // global vars
+// TODO creating lists -> limit to max # of lists and tasks
 var taskListOne = []string{"clean desk", "clean bed", "clean shower", "clean dishes"}
 var taskListTwo = []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
 var taskListThree = []string{"dry clothes", "dry shirts", "dry shorts", "dry socks"}
 var taskLists = [][]string{taskListOne, taskListTwo, taskListThree}
+var currentTaskList int
 
 func main() {
 	print("Welcome to the to do list app!")
@@ -39,6 +43,7 @@ func helloUser(writer http.ResponseWriter, request *http.Request) {
 }
 
 func showTasksPage(writer http.ResponseWriter, request *http.Request) {
+
 	//tells client to interpret response as html
 	writer.Header().Set("Content-Type", "text/html")
 
@@ -49,48 +54,80 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//TODO make these variable calls
 	fmt.Fprintln(writer, `
 		<form method="POST">
+			<input type="hidden" name="formType" value="display">
 			<button type="submit" name="action" value="the Reset button">Reset</button>
-			<button type="submit" name="action" value="Button 1">Button 1</button>
-			<button type="submit" name="action" value="Button 2">Button 2</button>
+			<button type="submit" name="action" value="Button 1">Task List 1</button>
+			<button type="submit" name="action" value="Button 2">Task List 2</button>
 			<button type="submit" name="action" value="the Show All button">Show all</button>
 		</form>
 	`)
 
+	fmt.Fprintln(writer, `
+		<form method="POST">
+			<input type="hidden" name="formType" value="taskAdd">
+			<p>Task to add: </p>
+			<input type="text" id="inputBox" name="user_input">
+			<button type="submit" name="action" value="Add task">Add task</button>
+		</form>
+	`)
+	//GET only retrieves data -> get all tasks //
+	//POST modifies data/creates new resource -> adding task //
+	//PUT modifies data/updates resources -> editing tasks
+	//DELETE remove resources -> deleting trasks
+
 	//checks "did client click a button and submit a form (POST request)"
 	if request.Method == http.MethodPost {
-		//get button value
+
+		//TODO delete
 		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
 
-		if buttonPressed == "the Reset button" { //reset button
-			return
-		} else if buttonPressed == "the Show All button" { // all task list
-			for index, taskList := range taskLists {
-				fmt.Print(taskList, " run ", index)
+		// checks if adding task
+		if request.FormValue("formType") == "taskAdd" {
+			if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
+				fmt.Fprintln(writer, "Not a valid input. Please only add tasks under 30 characters in length. Please retry.")
+			} else {
+				taskLists[currentTaskList] = append(taskLists[currentTaskList], request.FormValue("user_input"))
+				taskListOne = taskLists[currentTaskList]
+				fmt.Fprintf(writer, "Task added to list %d!", currentTaskList)
+			}
+		} else {
+
+			if buttonPressed == "the Reset button" { //reset button
+				return
+			} else if buttonPressed == "the Show All button" { // all task list
+				for _, taskList := range taskLists {
+					printTasks(taskList, writer)
+				}
+			} else { //specific task list
+
+				//displaying which list num
+				//could alternatively use stringBuilder
+				buttonNum := string(buttonPressed[7]) //for simplicity
+				fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
+
+				//picking which task list to display based on button click
+				var taskList []string
+				taskList = taskListSwitch(buttonNum, taskList)
+				currentTaskList, _ = strconv.Atoi(buttonNum)
+
+				//print list items
 				printTasks(taskList, writer)
 			}
-		} else { //specific task list
-			//displaying which list num
-			//could alternatively use stringBuilder
-			buttonNum := string(buttonPressed[7]) //for simplicity
-			fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
-
-			//picking which task list to display based on button click
-			var taskList []string
-			switch buttonNum {
-			case "1":
-				taskList = taskListOne
-			case "2":
-				taskList = taskListTwo
-			case "3":
-				taskList = taskListThree
-			}
-
-			//print list items
-			printTasks(taskList, writer)
 		}
-
 	}
+}
+
+func taskListSwitch(buttonNum string, taskList []string) []string {
+	switch buttonNum {
+	case "1":
+		taskList = taskListOne
+	case "2":
+		taskList = taskListTwo
+	case "3":
+		taskList = taskListThree
+	}
+	return taskList
 }
 
 func printTasks(taskList []string, writer http.ResponseWriter) {
