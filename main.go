@@ -8,12 +8,11 @@ import (
 )
 
 // global vars
-// TODO creating lists -> limit to max # of lists and tasks
-var taskListOne = []string{"clean desk", "clean bed", "clean shower", "clean dishes"}
+var taskListOne []string
 var taskListTwo = []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
 var taskListThree = []string{"dry clothes", "dry shirts", "dry shorts", "dry socks"}
 var taskLists = [][]string{taskListOne, taskListTwo, taskListThree}
-var currentTaskList int
+var currentTaskListInt = 1
 
 func main() {
 	print("Welcome to the to do list app!")
@@ -47,17 +46,19 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//tells client to interpret response as html
 	writer.Header().Set("Content-Type", "text/html")
 
-	var task_msg = `<p>This is the tasks page. Click Button 1 to display Task List 1. Click Button 2 to display Task List 2.</p>`
+	var task_msg = `<p>This is the tasks page. Note: Each task list has a maximum size of 10 tasks. Each task must be under 30 characters long.</p>`
 	fmt.Fprintln(writer, task_msg)
 
 	//button press submits a form, name is used when submitted -> when called, sends value
 	//TODO make these variable calls
+	//TODO make button values just nums and refactor
 	fmt.Fprintln(writer, `
 		<form method="POST">
 			<input type="hidden" name="formType" value="display">
 			<button type="submit" name="action" value="the Reset button">Reset</button>
 			<button type="submit" name="action" value="Button 1">Task List 1</button>
 			<button type="submit" name="action" value="Button 2">Task List 2</button>
+			<button type="submit" name="action" value="Button 3">Task List 3</button>
 			<button type="submit" name="action" value="the Show All button">Show all</button>
 		</form>
 	`)
@@ -67,30 +68,59 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 			<input type="hidden" name="formType" value="taskAdd">
 			<p>Task to add: </p>
 			<input type="text" id="inputBox" name="user_input">
+			<select name="priority" id="priority">
+				<option value="1">1</option>
+				<option value="2">2</option>
+				<option value="3">3</option>
+				<option value="4">4</option>
+				<option value="5">5</option>
+				<option value="6">6</option>
+				<option value="7">7</option>
+				<option value="8">8</option>
+				<option value="9">9</option>
+				<option value="10">10</option>
+			</select>
 			<button type="submit" name="action" value="Add task">Add task</button>
 		</form>
 	`)
 	//GET only retrieves data -> get all tasks //
 	//POST modifies data/creates new resource -> adding task //
-	//PUT modifies data/updates resources -> editing tasks
+	//priority levels for tasks //
+	//PUT modifies data/updates resources -> editing tasks **
 	//DELETE remove resources -> deleting trasks
 
 	//checks "did client click a button and submit a form (POST request)"
 	if request.Method == http.MethodPost {
 
-		//TODO delete
+		//TODO delete this
 		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
 
 		// checks if adding task
 		if request.FormValue("formType") == "taskAdd" {
 			if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
-				fmt.Fprintln(writer, "Not a valid input. Please only add tasks under 30 characters in length. Please retry.")
+				fmt.Fprintln(writer, "Not a valid input. Please retry.")
+			} else if len(taskLists[currentTaskListInt]) >= 10 {
+				fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
 			} else {
-				taskLists[currentTaskList] = append(taskLists[currentTaskList], request.FormValue("user_input"))
-				taskListOne = taskLists[currentTaskList]
-				fmt.Fprintf(writer, "Task added to list %d!", currentTaskList)
+				//TODO add at priority level
+				if currentTaskListInt == 0 { //needs this for some reason so loading doesn't break it
+					return
+				}
+				// var currentTaskList = taskLists[currentTaskListInt-1]     **don't do this lol
+				var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
+				if priorityLevel <= len(taskLists[currentTaskListInt-1]) {
+					taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], "")
+					copy(taskLists[currentTaskListInt-1][priorityLevel:], taskLists[currentTaskListInt-1][priorityLevel-1:]) // moves everything to the right
+					taskLists[currentTaskListInt-1][priorityLevel-1] = request.FormValue("user_input")
+					taskListOne = taskLists[currentTaskListInt-1]
+				} else {
+					taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], request.FormValue("user_input"))
+					taskListOne = taskLists[currentTaskListInt-1]
+					fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
+				}
 			}
+			//must print tasks
 		} else {
 
 			if buttonPressed == "the Reset button" { //reset button
@@ -109,7 +139,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 				//picking which task list to display based on button click
 				var taskList []string
 				taskList = taskListSwitch(buttonNum, taskList)
-				currentTaskList, _ = strconv.Atoi(buttonNum)
+				currentTaskListInt, _ = strconv.Atoi(buttonNum)
 
 				//print list items
 				printTasks(taskList, writer)
@@ -131,9 +161,11 @@ func taskListSwitch(buttonNum string, taskList []string) []string {
 }
 
 func printTasks(taskList []string, writer http.ResponseWriter) {
+	fmt.Fprintln(writer, "<ol>")
 	for i := 0; i <= len(taskList)-1; i++ {
 		fmt.Fprintf(writer, "<li>%s</li>", taskList[i])
 	}
+	fmt.Fprintln(writer, "</ol>")
 }
 
 //http is how data from is transferred between backend and frontend
