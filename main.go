@@ -9,7 +9,7 @@ import (
 var taskListOne = []string{"clean desk", "clean bed", "clean shower", "clean dishes"}
 var taskListTwo = []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
 var taskListThree = []string{"dry clothes", "dry shirts", "dry shorts", "dry socks"}
-var taskLists [][]string
+var taskLists = [][]string{taskListOne, taskListTwo, taskListThree}
 
 func main() {
 	print("Welcome to the to do list app!")
@@ -18,16 +18,15 @@ func main() {
 	//(url, function tp handle)
 	http.HandleFunc("/", welcome)
 	http.HandleFunc("/greeting", helloUser)
-	http.HandleFunc("/showTasks", showTasks)
+	http.HandleFunc("/showTasksPage", showTasksPage)
 
 	http.ListenAndServe(":8080", nil)
-
 }
 
 // TODO send user to greeting/showtasks? also explanation that it won't store anything once you close instance
 func welcome(writer http.ResponseWriter, request *http.Request) {
 	var welcome_msg = `Hi! This is the home page. This project was built entirely 
-	with VSCode and Golang. Please visit /greeting or /showTasks to view the other pages.`
+	using VSCode and Golang. Please visit /greeting or /showTasks to view the other pages.`
 	fmt.Fprint(writer, welcome_msg)
 }
 
@@ -39,7 +38,7 @@ func helloUser(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprint(writer, greeting)
 }
 
-func showTasks(writer http.ResponseWriter, request *http.Request) {
+func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//tells client to interpret response as html
 	writer.Header().Set("Content-Type", "text/html")
 
@@ -47,10 +46,13 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 	fmt.Fprintln(writer, task_msg)
 
 	//button press submits a form, name is used when submitted -> when called, sends value
+	//TODO make these variable calls
 	fmt.Fprintln(writer, `
 		<form method="POST">
+			<button type="submit" name="action" value="the Reset button">Reset</button>
 			<button type="submit" name="action" value="Button 1">Button 1</button>
 			<button type="submit" name="action" value="Button 2">Button 2</button>
+			<button type="submit" name="action" value="the Show All button">Show all</button>
 		</form>
 	`)
 
@@ -60,35 +62,41 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
 
-		//displaying which list num
-		//could alternatively use stringBuilder
-		buttonNum := string(buttonPressed[7]) //for simplicity
-		fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
+		if buttonPressed == "the Reset button" { //reset button
+			return
+		} else if buttonPressed == "the Show All button" { // all task list
+			for index, taskList := range taskLists {
+				fmt.Print(taskList, " run ", index)
+				printTasks(taskList, writer)
+			}
+		} else { //specific task list
+			//displaying which list num
+			//could alternatively use stringBuilder
+			buttonNum := string(buttonPressed[7]) //for simplicity
+			fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
 
-		//picking which task list to display based on button click
-		var taskList []string
-		switch buttonNum {
-		case "1":
-			taskList = taskListOne
-		case "2":
-			taskList = taskListTwo
-		case "3":
-			taskList = taskListThree
-		}
+			//picking which task list to display based on button click
+			var taskList []string
+			switch buttonNum {
+			case "1":
+				taskList = taskListOne
+			case "2":
+				taskList = taskListTwo
+			case "3":
+				taskList = taskListThree
+			}
 
-		//print list items
-		for i := 0; i <= len(taskList)-1; i++ {
-			fmt.Fprintf(writer, "<li>%s</li>", taskList[i])
+			//print list items
+			printTasks(taskList, writer)
 		}
 
 	}
+}
 
-	// taskLists = append(taskLists, taskListOne)
-
-	// taskListTwo = addTask(taskListTwo, "make dinner")
-	// taskLists = append(taskLists, taskListTwo)
-
-	// fmt.Fprint(writer, taskListOne)
+func printTasks(taskList []string, writer http.ResponseWriter) {
+	for i := 0; i <= len(taskList)-1; i++ {
+		fmt.Fprintf(writer, "<li>%s</li>", taskList[i])
+	}
 }
 
 //http is how data from is transferred between backend and frontend
