@@ -53,7 +53,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//TODO make these variable calls
 	//TODO make button values just nums and refactor
 	fmt.Fprintln(writer, `
-		<form method="POST">
+		<form method="GET">
 			<input type="hidden" name="formType" value="display">
 			<button type="submit" name="action" value="the Reset button">Reset</button>
 			<button type="submit" name="action" value="Button 1">Task List 1</button>
@@ -65,7 +65,6 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 
 	fmt.Fprintln(writer, `
 		<form method="POST">
-			<input type="hidden" name="formType" value="taskAdd">
 			<p>Task to add: </p>
 			<input type="text" id="inputBox" name="user_input">
 			<select name="priority" id="priority">
@@ -90,59 +89,57 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//DELETE remove resources -> deleting trasks
 
 	//checks "did client click a button and submit a form (POST request)"
-	if request.Method == http.MethodPost {
+	if request.Method == http.MethodGet {
 
 		//TODO delete this
 		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
 
-		// checks if adding task
-		if request.FormValue("formType") == "taskAdd" {
-			if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
-				fmt.Fprintln(writer, "Not a valid input. Please retry.")
-			} else if len(taskLists[currentTaskListInt]) >= 10 {
-				fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
-			} else {
-				//TODO add at priority level
-				if currentTaskListInt == 0 { //needs this for some reason so loading doesn't break it
-					return
-				}
-				// var currentTaskList = taskLists[currentTaskListInt-1]     **don't do this lol
-				var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
-				if priorityLevel <= len(taskLists[currentTaskListInt-1]) {
-					taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], "")
-					copy(taskLists[currentTaskListInt-1][priorityLevel:], taskLists[currentTaskListInt-1][priorityLevel-1:]) // moves everything to the right
-					taskLists[currentTaskListInt-1][priorityLevel-1] = request.FormValue("user_input")
-					taskListOne = taskLists[currentTaskListInt-1]
-				} else {
-					taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], request.FormValue("user_input"))
-					taskListOne = taskLists[currentTaskListInt-1]
-					fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
-				}
-			}
-			//must print tasks
-		} else {
-
-			if buttonPressed == "the Reset button" { //reset button
-				return
-			} else if buttonPressed == "the Show All button" { // all task list
-				for _, taskList := range taskLists {
-					printTasks(taskList, writer)
-				}
-			} else { //specific task list
-
-				//displaying which list num
-				//could alternatively use stringBuilder
-				buttonNum := string(buttonPressed[7]) //for simplicity
-				fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
-
-				//picking which task list to display based on button click
-				var taskList []string
-				taskList = taskListSwitch(buttonNum, taskList)
-				currentTaskListInt, _ = strconv.Atoi(buttonNum)
-
-				//print list items
+		if buttonPressed == "the Reset button" { //reset button
+			return
+		} else if buttonPressed == "the Show All button" { // all task list
+			for _, taskList := range taskLists {
 				printTasks(taskList, writer)
+			}
+		} else { //specific task list
+
+			//displaying which list num
+			//could alternatively use stringBuilder
+			buttonNum := string(buttonPressed[7]) //for simplicity
+			fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
+
+			//picking which task list to display based on button click
+			var taskList []string
+			taskList = taskListSwitch(buttonNum, taskList)
+			currentTaskListInt, _ = strconv.Atoi(buttonNum)
+
+			//print list items
+			printTasks(taskList, writer)
+
+		}
+	}
+
+	if request.Method == http.MethodPost {
+		if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
+			fmt.Fprintln(writer, "Not a valid input. Please retry.")
+		} else if len(taskLists[currentTaskListInt-1]) >= 10 {
+			fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
+		} else {
+			if currentTaskListInt == 0 { //needs this for some reason so loading doesn't break it
+				return
+			}
+			// var currentTaskList = taskLists[currentTaskListInt-1]     **don't do this lol
+			var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
+			if priorityLevel <= len(taskLists[currentTaskListInt-1]) {
+				taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], "")
+				copy(taskLists[currentTaskListInt-1][priorityLevel:], taskLists[currentTaskListInt-1][priorityLevel-1:]) // moves everything to the right
+				taskLists[currentTaskListInt-1][priorityLevel-1] = request.FormValue("user_input")
+				taskListOne = taskLists[currentTaskListInt-1]
+				fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
+			} else {
+				taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], request.FormValue("user_input"))
+				taskListOne = taskLists[currentTaskListInt-1]
+				fmt.Fprintf(writer, "Task added to list %d!", currentTaskListInt)
 			}
 		}
 	}
