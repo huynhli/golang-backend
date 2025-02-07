@@ -24,6 +24,7 @@ func main() {
 
 }
 
+// TODO send user to greeting/showtasks? also explanation that it won't store anything once you close instance
 func welcome(writer http.ResponseWriter, request *http.Request) {
 	var welcome_msg = `Hi! This is the home page. This project was built entirely 
 	with VSCode and Golang. Please visit /greeting or /showTasks to view the other pages.`
@@ -55,13 +56,16 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 
 	//checks "did client click a button and submit a form (POST request)"
 	if request.Method == http.MethodPost {
-		buttonPressed := request.FormValue("action") //get button value
+		//get button value
+		buttonPressed := request.FormValue("action") 
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
-		buttonNum := buttonPressed[7] //for simplicity
-
-		fmt.Fprintln(writer, buttonNum, buttonPressed)
+		
+		//displaying which list num
+		//could alternatively use stringBuilder
+		buttonNum := string(buttonPressed[7]) //for simplicity
 		fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
 
+		//picking which task list to display based on button click
 		var taskList []string
 		switch buttonNum {
 		case 1:
@@ -72,6 +76,7 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 			taskList = taskListThree
 		}
 
+		//print list items
 		for i := 0; i <= len(taskList)-1; i++ {
 			fmt.Fprintf(writer, "<li>%s</li>", taskList[i])
 		}
