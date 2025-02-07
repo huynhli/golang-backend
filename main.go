@@ -57,9 +57,9 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 	//checks "did client click a button and submit a form (POST request)"
 	if request.Method == http.MethodPost {
 		//get button value
-		buttonPressed := request.FormValue("action") 
+		buttonPressed := request.FormValue("action")
 		fmt.Fprintf(writer, "<h3>You clicked %s.\n</h3>", buttonPressed)
-		
+
 		//displaying which list num
 		//could alternatively use stringBuilder
 		buttonNum := string(buttonPressed[7]) //for simplicity
@@ -68,11 +68,11 @@ func showTasks(writer http.ResponseWriter, request *http.Request) {
 		//picking which task list to display based on button click
 		var taskList []string
 		switch buttonNum {
-		case 1:
+		case "1":
 			taskList = taskListOne
-		case 2:
+		case "2":
 			taskList = taskListTwo
-		case 3:
+		case "3":
 			taskList = taskListThree
 		}
 
