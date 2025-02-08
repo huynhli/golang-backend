@@ -5,12 +5,13 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // global vars
 var taskListOne []string
-var taskListTwo = []string{"fold clothes", "fold shirts", "fold shorts", "fold socks"}
-var taskListThree = []string{"dry clothes", "dry shirts", "dry shorts", "dry socks"}
+var taskListTwo []string
+var taskListThree []string
 var taskLists = [][]string{taskListOne, taskListTwo, taskListThree}
 var currentTaskListInt = 1
 
@@ -22,8 +23,10 @@ func main() {
 	http.HandleFunc("/", welcome)
 	http.HandleFunc("/greeting", helloUser)
 	http.HandleFunc("/showTasksPage", showTasksPage)
-
-	http.ListenAndServe(":8080", nil)
+	err := http.ListenAndServe(":8080", nil) // Blocks execution
+	if err != nil {
+		print(err.Error())
+	}
 }
 
 // TODO send user to greeting/showtasks? also explanation that it won't store anything once you close instance
@@ -84,6 +87,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 			<button type="submit" name="action" value="Add task">Add task</button>
 		</form>
 	`)
+
 	//GET only retrieves data -> get all tasks //
 	//POST modifies data/creates new resource -> adding task //
 	//priority levels for tasks //
@@ -100,7 +104,8 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 		if buttonPressed == "the Reset button" { //reset button
 			return
 		} else if buttonPressed == "the Show All button" { // all task list
-			for _, taskList := range taskLists {
+			for index, taskList := range taskLists {
+				fmt.Fprintf(writer, `<h2>List %d:</h2>`, index+1)
 				printTasks(taskList, writer)
 			}
 		} else { //specific task list
@@ -108,6 +113,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 			//displaying which list num
 			//could alternatively use stringBuilder
 			buttonNum := string(buttonPressed[7]) //for simplicity
+
 			fmt.Fprintf(writer, "<h1>Displaying Task List %s:\n</h1>", buttonNum)
 
 			//picking which task list to display based on button click
@@ -118,6 +124,26 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 			//print list items
 			printTasks(taskList, writer)
 
+			// taskNumPrinter()
+			var optionString strings.Builder
+			for i := 1; i <= len(taskList); i++ {
+				optionString.WriteString("<option value=\"task-")
+				optionString.WriteString(strconv.Itoa(i))
+				optionString.WriteString("\">")
+				optionString.WriteString(strconv.Itoa(i))
+				optionString.WriteString("</option>")
+			}
+			fmt.Fprintf(writer, `
+				<form method="PUT">
+					<label>Change task </label>
+						<select name="priority" id="priority">
+							%s
+						</select>
+					<label> to </label>
+						<input type="text" id="inputBox" name="changed_task">
+					<button type="submit" name="action" value="rename">Rename</button>
+				</form>
+			`, optionString.String())
 		}
 	}
 
@@ -127,20 +153,24 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 		} else if len(taskLists[currentTaskListInt-1]) >= 10 {
 			fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
 		} else {
-			// var currentTaskList = taskLists[currentTaskListInt-1]     **don't do this lol
+			var currentTaskList = &taskLists[currentTaskListInt-1] //needs & and * for pointer stuff
 			var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
-			if priorityLevel <= len(taskLists[currentTaskListInt-1]) {
-				taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], "")
-				copy(taskLists[currentTaskListInt-1][priorityLevel:], taskLists[currentTaskListInt-1][priorityLevel-1:]) // moves everything to the right
-				taskLists[currentTaskListInt-1][priorityLevel-1] = request.FormValue("user_input")
-				taskListOne = taskLists[currentTaskListInt-1]
+			if priorityLevel <= len(*currentTaskList) {
+				*currentTaskList = append(*currentTaskList, "")
+				copy((*currentTaskList)[priorityLevel:], (*currentTaskList)[priorityLevel-1:]) // moves everything to the right
+				(*currentTaskList)[priorityLevel-1] = request.FormValue("user_input")
 				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 			} else {
-				taskLists[currentTaskListInt-1] = append(taskLists[currentTaskListInt-1], request.FormValue("user_input"))
-				taskListOne = taskLists[currentTaskListInt-1]
+				*currentTaskList = append(*currentTaskList, request.FormValue("user_input"))
 				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 			}
 		}
+	}
+
+	if request.Method == http.MethodPut {
+		var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
+		taskLists[currentTaskListInt][priorityLevel] = request.FormValue("changed_task")
+
 	}
 
 }
@@ -148,16 +178,19 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 func taskListSwitch(buttonNum string, taskList []string) []string {
 	switch buttonNum {
 	case "1":
-		taskList = taskListOne
+		taskList = taskLists[0]
 	case "2":
-		taskList = taskListTwo
+		taskList = taskLists[1]
 	case "3":
-		taskList = taskListThree
+		taskList = taskLists[2]
 	}
 	return taskList
 }
 
 func printTasks(taskList []string, writer http.ResponseWriter) {
+	if len(taskList) == 0 {
+		fmt.Fprintln(writer, "This list is empty.")
+	}
 	fmt.Fprintln(writer, "<ol>")
 	for i := 0; i <= len(taskList)-1; i++ {
 		fmt.Fprintf(writer, "<li>%s</li>", taskList[i])
