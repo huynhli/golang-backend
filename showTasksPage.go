@@ -9,6 +9,8 @@ import (
 )
 
 // global vars
+// TODO creation and deletion of custom task lists
+// TODO sorting and filtering tasks
 var taskListOne []string
 var taskListTwo []string
 var taskListThree []string
@@ -26,8 +28,6 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 		task list button again.</p>`)
 
 	//button press submits a form, name is used when submitted -> when called, sends value
-	//TODO make these variable calls
-	//TODO make button values just nums and refactor
 	fmt.Fprintln(writer, `
 		<form method="GET">
 			<input type="hidden" name="formType" value="display">
@@ -67,7 +67,6 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	//DELETE remove resources -> deleting trasks //
 
 	//checks "did client click a button and submit a form (POST request)"
-	//TODO huge switch helper with everything?
 	if request.Method == http.MethodGet && request.URL.Query().Get("action") != "" {
 		buttonPressed := request.FormValue("action")
 		if buttonPressed == "the Reset button" { //reset button
