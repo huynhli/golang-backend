@@ -177,10 +177,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 	}
 
 	if request.Method == http.MethodPost {
-
-		println("at least here ", request.FormValue("action"))
 		if request.FormValue("action") == "add_task" {
-			println("at least")
 			addTask(request, writer)
 		} else if request.FormValue("action") == "rename" {
 			renameTask(request)
@@ -189,10 +186,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 
-	fmt.Fprintln(writer, `</body></html>`)
-
-	println("Form values: ", request.FormValue("user_input"))
-	println("Action: ", request.FormValue("action"))
+	// fmt.Fprintln(writer, `</body></html>`)
 }
 
 func renameDropdownHelper(taskList []string) strings.Builder {
@@ -220,28 +214,20 @@ func dropdownDeleteHelper(taskList []string) strings.Builder {
 }
 
 func addTask(request *http.Request, writer http.ResponseWriter) {
-
-	println("yeah")
 	if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) { //invalid input
 		fmt.Fprintln(writer, "Not a valid input. Please retry.")
-		println("yeah no in")
 	} else if len(taskLists[currentTaskListInt-1]) >= 10 { //too many tasks already
 		fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
-		println("yeah no in")
 	} else { // adding based on priority selected
-		println("yeah in ")
 		var currentTaskList = &taskLists[currentTaskListInt-1] //needs & and * for pointer stuff
 		var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
-		println(priorityLevel)
 		if priorityLevel <= len(*currentTaskList) {
 			*currentTaskList = append(*currentTaskList, "")
 			copy((*currentTaskList)[priorityLevel:], (*currentTaskList)[priorityLevel-1:]) // moves everything to the right
 			(*currentTaskList)[priorityLevel-1] = request.FormValue("user_input")
-			print("<h2>Task added to list !</h2>", currentTaskListInt)
 			fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 		} else {
 			*currentTaskList = append(*currentTaskList, request.FormValue("user_input"))
-			print("<h2>Task added to list !</h2>", currentTaskListInt)
 			fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
 		}
 	}
