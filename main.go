@@ -23,13 +23,13 @@ func main() {
 	http.HandleFunc("/", welcome)
 	http.HandleFunc("/greeting", helloUser)
 	http.HandleFunc("/showTasksPage", showTasksPage)
-	err := http.ListenAndServe(":8080", nil) // Blocks execution
+	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		print(err.Error())
 	}
 }
 
-// TODO send user to greeting/showtasks? also explanation that it won't store anything once you close instance
+// TODO routing? also explanation that it won't store anything once you close instance
 func welcome(writer http.ResponseWriter, request *http.Request) {
 	var welcome_msg = `Hi! This is the home page. This project was built entirely 
 	using VSCode and Golang. Please visit /greeting or /showTasks to view the other pages.`
@@ -84,15 +84,15 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 				<option value="9">9</option>
 				<option value="10">10</option>
 			</select>
-			<button type="submit" name="action" value="Add task">Add task</button>
+			<button type="submit" name="action" value="add_task">Add task</button>
 		</form>
 	`)
 
 	//GET only retrieves data -> get all tasks //
 	//POST modifies data/creates new resource -> adding task //
 	//priority levels for tasks //
-	//PUT modifies data/updates resources -> editing tasks **
-	//DELETE remove resources -> deleting trasks
+	//PUT modifies data/updates resources -> editing tasks //
+	//DELETE remove resources -> deleting trasks //
 
 	//checks "did client click a button and submit a form (POST request)"
 	//TODO huge switch helper with everything?
@@ -134,7 +134,7 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 				optionString.WriteString("</option>")
 			}
 			fmt.Fprintf(writer, `
-				<form method="PUT">
+				<form method="POST">
 					<label>Change task </label>
 						<select name="priority" id="priority">
 							%s
@@ -144,33 +144,59 @@ func showTasksPage(writer http.ResponseWriter, request *http.Request) {
 					<button type="submit" name="action" value="rename">Rename</button>
 				</form>
 			`, optionString.String())
+
+			//deletion
+			var dropdownString strings.Builder
+			for i := 1; i <= len(taskList); i++ {
+				dropdownString.WriteString("<option value=\"task-")
+				dropdownString.WriteString(strconv.Itoa(i))
+				dropdownString.WriteString("\">")
+				dropdownString.WriteString(strconv.Itoa(i))
+				dropdownString.WriteString("</option>")
+			}
+			fmt.Fprintf(writer, `
+				<form method="POST">
+					<label>Delete task </label>
+						<select name="priority" id="priority">
+							%s
+						</select>
+					<label>? </label>
+					<button type="submit" name="action" value="delete">Delete</button>
+				</form>
+			`, dropdownString.String())
 		}
 	}
 
 	if request.Method == http.MethodPost {
-		if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
-			fmt.Fprintln(writer, "Not a valid input. Please retry.")
-		} else if len(taskLists[currentTaskListInt-1]) >= 10 {
-			fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
-		} else {
-			var currentTaskList = &taskLists[currentTaskListInt-1] //needs & and * for pointer stuff
-			var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
-			if priorityLevel <= len(*currentTaskList) {
-				*currentTaskList = append(*currentTaskList, "")
-				copy((*currentTaskList)[priorityLevel:], (*currentTaskList)[priorityLevel-1:]) // moves everything to the right
-				(*currentTaskList)[priorityLevel-1] = request.FormValue("user_input")
-				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
+		if request.FormValue("action") == "add_task" {
+			if !regexp.MustCompile(`^.{1,30}$`).MatchString(request.FormValue("user_input")) {
+				fmt.Fprintln(writer, "Not a valid input. Please retry.")
+			} else if len(taskLists[currentTaskListInt-1]) >= 10 {
+				fmt.Fprintln(writer, "Task list it full. Complete a task and try again.")
 			} else {
-				*currentTaskList = append(*currentTaskList, request.FormValue("user_input"))
-				fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
+				var currentTaskList = &taskLists[currentTaskListInt-1] //needs & and * for pointer stuff
+				var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
+				if priorityLevel <= len(*currentTaskList) {
+					*currentTaskList = append(*currentTaskList, "")
+					copy((*currentTaskList)[priorityLevel:], (*currentTaskList)[priorityLevel-1:]) // moves everything to the right
+					(*currentTaskList)[priorityLevel-1] = request.FormValue("user_input")
+					fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
+				} else {
+					*currentTaskList = append(*currentTaskList, request.FormValue("user_input"))
+					fmt.Fprintf(writer, "<h2>Task added to list %d!</h2>", currentTaskListInt)
+				}
 			}
+		} else if request.FormValue("action") == "rename" {
+			priorityString := request.FormValue("priority")
+			var priorityLevelNum, _ = strconv.Atoi(priorityString[5:])
+			var currentTaskList = &taskLists[currentTaskListInt-1]
+			(*currentTaskList)[priorityLevelNum-1] = request.FormValue("changed_task")
+		} else if request.FormValue("action") == "delete" {
+			priorityString := request.FormValue("priority")
+			var priorityLevelNum, _ = strconv.Atoi(priorityString[5:])
+			var currentTaskList = &taskLists[currentTaskListInt-1]
+			*currentTaskList = append((*currentTaskList)[:priorityLevelNum-1], (*currentTaskList)[priorityLevelNum:]...)
 		}
-	}
-
-	if request.Method == http.MethodPut {
-		var priorityLevel, _ = strconv.Atoi(request.FormValue("priority"))
-		taskLists[currentTaskListInt][priorityLevel] = request.FormValue("changed_task")
-
 	}
 
 }
@@ -215,46 +241,3 @@ func printTasks(taskList []string, writer http.ResponseWriter) {
 //scripts or images to use -> not localhost
 
 //host names mapped to ip addresses
-
-func printAllTasks(listOfLists [][]string) {
-	for _, taskList := range listOfLists {
-		for _, tasks := range taskList {
-			println("--- ", tasks)
-		}
-	}
-	for i := 0; i <= len(listOfLists)-1; i++ {
-		for j := 0; j <= len(listOfLists[i])-1; j++ {
-
-			println(">>>", listOfLists[i][j])
-		}
-	}
-}
-
-func addTask(taskList []string, task string) []string {
-	taskList = append(taskList, task)
-	return taskList
-}
-
-func test() {
-	fmt.Println("test")
-
-	fmt.Println("Welcome to my to-do list app!")
-
-	taskListOne := []int{0}
-	for i := 11; i <= 14; i++ {
-		taskListOne = append(taskListOne, i)
-	}
-
-	for index, task := range taskListOne {
-		println(index, task)
-	}
-	for _, task := range taskListOne {
-		println(task)
-	}
-
-	fmt.Println("List of to dos")
-	fmt.Println(taskListOne)
-	fmt.Println(taskListOne[0])
-	fmt.Println(taskListOne[1:])
-	fmt.Println(taskListOne[1:2])
-}
